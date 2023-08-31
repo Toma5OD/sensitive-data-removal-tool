@@ -1,11 +1,19 @@
-def remove_or_redact_info(content, word_to_remove, method):
-    if word_to_remove not in content:
-        return None, False
+import re
+
+def remove_or_redact_info(content, word_to_remove, method, case_sensitive):
+    if case_sensitive:
+        if word_to_remove not in content:
+            return None, False
+        pattern = re.compile(re.escape(word_to_remove))
+    else:
+        pattern = re.compile(re.escape(word_to_remove), re.IGNORECASE)
+        if not pattern.search(content):
+            return None, False
     
     if method == 'redact':
-        updated_content = content.replace(word_to_remove, '[REDACTED]')
+        updated_content = pattern.sub('[REDACTED]', content)
     else:
-        updated_content = content.replace(word_to_remove, '')
+        updated_content = pattern.sub('', content)
     
     return updated_content, True
 
@@ -26,11 +34,12 @@ def main():
         content = input("Enter the text directly: ")
 
     word_to_remove = input("Enter the word or string to be removed: ")
+    case_sensitive = input("Should the removal be case-sensitive? (y/n): ").lower() == 'y'
 
     print("By default, the word will be redacted.")
     method = 'redact' if input("Would you like the word to be simply removed instead of being redacted? (y/n): ").lower() != 'y' else 'remove'
     
-    updated_content, success = remove_or_redact_info(content, word_to_remove, method)
+    updated_content, success = remove_or_redact_info(content, word_to_remove, method, case_sensitive)
     
     if not success:
         print("Word not found. Operation unsuccessful.")
