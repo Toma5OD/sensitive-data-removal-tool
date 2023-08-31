@@ -1,21 +1,23 @@
 import re
 
-def remove_or_redact_info(content, word_to_remove, method, case_sensitive):
-    if case_sensitive:
-        if word_to_remove not in content:
-            return None, False
-        pattern = re.compile(re.escape(word_to_remove))
-    else:
-        pattern = re.compile(re.escape(word_to_remove), re.IGNORECASE)
+def remove_or_redact_info(content, words_to_remove, method, case_sensitive):
+    total_redactions = 0
+    for word_to_remove in words_to_remove:
+        pattern = re.compile(re.escape(word_to_remove), re.IGNORECASE if not case_sensitive else 0)
+        
         if not pattern.search(content):
-            return None, False
-    
-    if method == 'redact':
-        updated_content = pattern.sub('[REDACTED]', content)
-    else:
-        updated_content = pattern.sub('', content)
-    
-    return updated_content, True
+            print(f"Word '{word_to_remove}' not found.")
+            continue
+        
+        count = len(pattern.findall(content))
+        total_redactions += count
+        
+        if method == 'redact':
+            content = pattern.sub('[REDACTED]', content)
+        else:
+            content = pattern.sub('', content)
+            
+    return content, total_redactions
 
 def add_security_notes(content):
     note = "\n--- Sensitive information has been removed from this file for security reasons ---\n"
@@ -33,17 +35,21 @@ def main():
     else:
         content = input("Enter the text directly: ")
 
-    word_to_remove = input("Enter the word or string to be removed: ")
+    num_words = int(input("How many different words would you like to redact?: "))
+    words_to_remove = [input(f"Enter word {i+1} to be redacted: ") for i in range(num_words)]
+    
     case_sensitive = input("Should the removal be case-sensitive? (y/n): ").lower() == 'y'
 
-    print("By default, the word will be redacted.")
-    method = 'redact' if input("Would you like the word to be simply removed instead of being redacted? (y/n): ").lower() != 'y' else 'remove'
+    print("By default, the words will be redacted.")
+    method = 'redact' if input("Would you like the words to be simply removed instead of being redacted? (y/n): ").lower() != 'y' else 'remove'
     
-    updated_content, success = remove_or_redact_info(content, word_to_remove, method, case_sensitive)
+    updated_content, total_redactions = remove_or_redact_info(content, words_to_remove, method, case_sensitive)
     
-    if not success:
-        print("Word not found. Operation unsuccessful.")
+    if total_redactions == 0:
+        print("No words found. Operation unsuccessful.")
         return
+    
+    print(f"Total redactions made: {total_redactions}")
 
     add_notes = input("Add security note to the top and bottom of the content? (y/n): ").lower() == 'y'
 
